@@ -13,14 +13,20 @@ public class PlayerScript : MonoBehaviour
     private Vector2 moveVector = new Vector2(0, 0);
     private float speed, accel, decel, gravity, grav, jump, flap;
     private int isRight = 1;
-    private bool isGrounded = false;
+    public bool jumping = false;
+    public bool uCheck, dCheck, lCheck, rCheck;
+    private Rect collision;
     private int pumpCt = 0;
+
+    public Transform balloon;
+    private Transform prefab;
     
     private SpriteRenderer rend;
     private Animator anim;
     private BoxCollider2D coll;
     private Rigidbody2D rb;
     private RaycastHit2D[] hit;
+    private ContactFilter2D filter;
 
     private float scale = 0.005f;
 
@@ -41,7 +47,7 @@ public class PlayerScript : MonoBehaviour
             case Form.Balloon1:
                 speed = 7.5f * scale;
                 accel = 0.6f * scale;
-                decel = 0.6f * scale;
+                decel = 0.5f * scale;
                 gravity = -10 * scale;
                 grav = 0.35f * scale;
                 jump = 6 * scale;
@@ -50,7 +56,7 @@ public class PlayerScript : MonoBehaviour
             case Form.Balloon2:
                 speed = 7 * scale;
                 accel = 0.4f * scale;
-                decel = 0.4f * scale;
+                decel = 0.3f * scale;
                 gravity = -10 * scale;
                 grav = 0.25f * scale;
                 jump = 7 * scale;
@@ -87,82 +93,55 @@ public class PlayerScript : MonoBehaviour
         }
 
         //Collisions
-        if (castUp() && moveVector.y > 0)
+        checkCollisions();
+
+        if (dCheck && moveVector.y > 0)
         {
             moveVector.y = 0;
         }
 
-        if (castDown() && moveVector.y <= 0)
+        if (uCheck && moveVector.y <= 0)
         {
             moveVector.y = 0;
-            isGrounded = true;
-            transform.position = new Vector2(transform.position.x, hit[0].transform.position.y + hit[0].collider.bounds.size.y + coll.bounds.extents.y);
+            transform.position = new Vector2(transform.position.x, collision.height - 0.01f);
         }
 
-        if (castLeft() && moveVector.x < 0)
+        if (rCheck && moveVector.x < 0)
         {
             moveVector.x = 0;
         }
 
-        if (castRight() && moveVector.x > 0)
+        if (lCheck && moveVector.x > 0)
         {
             moveVector.x = 0;
         }
 
         if (state != State.Pump)
         {
-            if (form == Form.None || form == Form.Chute || form == Form.Rocket)
+            if (uCheck || form == Form.None || form == Form.Chute || form == Form.Rocket)
             {
-                if (Input.GetKey("d") && !castRight())
+                if (Input.GetKey("d") && !lCheck)
                 {
                     if (moveVector.x < speed) moveVector.x += accel;
                     else if (moveVector.x > speed) moveVector.x = speed;
 
-                    if (moveVector.x > 0)
+                    if(moveVector.x < 0)
                     {
-                        if (isGrounded && state != State.Walk)
-                        {
-                            state = State.Walk;
-                            anim.SetInteger("State", (int)state);
-                            anim.SetTrigger("Walk");
-                        }
-                        if (isRight == 0)
-                        {
-                            isRight = 1;
-                            anim.SetInteger("isRight", isRight);
-                        }
-                    }
-                    else
-                    {
-                        if (isGrounded && state != State.Skid)
+                        if (uCheck && state != State.Skid)
                         {
                             state = State.Skid;
                             anim.SetInteger("State", (int)state);
                         }
                     }
                 }
-                else if (Input.GetKey("a") && !castLeft())
+                else if (Input.GetKey("a") && !rCheck)
                 {
                     if (moveVector.x > -speed) moveVector.x -= accel;
                     else if (moveVector.x < -speed) moveVector.x = -speed;
 
-                    if (moveVector.x < 0)
+                    if (moveVector.x > 0)
                     {
-                        if (isGrounded && state != State.Walk)
-                        {
-                            state = State.Walk;
-                            anim.SetInteger("State", (int)state);
-                            anim.SetTrigger("Walk");
-                        }
-                        if (isRight == 1)
-                        {
-                            isRight = 0;
-                            anim.SetInteger("isRight", isRight);
-                        }
-                    }
-                    else
-                    {
-                        if (isGrounded && state != State.Skid)
+                        if (uCheck && state != State.Skid)
                         {
                             state = State.Skid;
                             anim.SetInteger("State", (int)state);
@@ -174,7 +153,7 @@ public class PlayerScript : MonoBehaviour
                     if (Mathf.Abs(moveVector.x) < decel)
                     {
                         moveVector.x = 0;
-                        if (isGrounded && state != State.Idle)
+                        if (uCheck && state != State.Idle)
                         {
                             state = State.Idle;
                             anim.SetInteger("State", (int)state);
@@ -182,6 +161,26 @@ public class PlayerScript : MonoBehaviour
                     }
                     else if (moveVector.x > 0) moveVector.x -= decel;
                     else moveVector.x += decel;
+                }
+
+                if (moveVector.x != 0)
+                {
+                    if (uCheck && state != State.Walk && ((moveVector.x > 0 && !Input.GetKey("a")) || (moveVector.x < 0 && !Input.GetKey("d"))))
+                    {
+                        state = State.Walk;
+                        anim.SetInteger("State", (int)state);
+                        anim.SetTrigger("Walk");
+                    }
+                    if (moveVector.x > 0 && isRight == 0)
+                    {
+                        isRight = 1;
+                        anim.SetInteger("isRight", isRight);
+                    }
+                    if (moveVector.x < 0 && isRight == 1)
+                    {
+                        isRight = 0;
+                        anim.SetInteger("isRight", isRight);
+                    }
                 }
             }
             else
@@ -199,8 +198,18 @@ public class PlayerScript : MonoBehaviour
             }
         }
 
+        //Jumping
+        if(jumping)
+        {
+            moveVector.y = jump;
+            state = State.Jump;
+            anim.SetInteger("State", (int)state);
+            anim.ResetTrigger("Flap");
+            jumping = false;
+        }
+
         //Falling
-        if (!isGrounded)
+        if (!uCheck)
         {
             if (moveVector.y > gravity) moveVector.y -= grav;
             else if (moveVector.y < gravity) moveVector.y = gravity;           
@@ -210,37 +219,38 @@ public class PlayerScript : MonoBehaviour
                 state = State.Jump;
                 anim.SetInteger("State", (int)state);
             }
+
+            if(form == Form.Balloon1 || form == Form.Balloon2)
+            {
+                moveVector.x = ((int)(moveVector.x / scale) - ((int)(moveVector.x / scale) % 2)) * scale;
+            }
         }
 
         transform.Translate(moveVector);
-
-        isGrounded = false;   
     }
 
     void Update()
     {
-        //Jump
         if (Input.GetButtonDown("Jump") && state != State.Pump)
         {
-            if (castDown())
+            if (uCheck)                 /*Jump*/
             {
-                moveVector.y = jump;
-                state = State.Jump;
-                anim.SetInteger("State", (int)state);
-                anim.ResetTrigger("Flap");
+                jumping = true;
             }   
-            else
+            else                        /*Flap*/
             {
                 if(form == Form.Balloon1 || form == Form.Balloon2)
                 {
                     moveVector.y = flap;
+                    if (Input.GetKey("d") && (int)(moveVector.x / scale) < 6) moveVector.x += 2 * scale;
+                    else if (Input.GetKey("a") && (int)(moveVector.x / scale) > -6) moveVector.x -= 2 * scale;
                 }
                 anim.SetTrigger("Flap");
             } 
         }
 
         //(Take out / Put away) pump
-        if (Input.GetKeyDown("p") && castDown() && form != Form.Balloon2 && form != Form.Rocket)
+        if (Input.GetKeyDown("p") && uCheck && form != Form.Balloon2 && form != Form.Rocket)
         {
             if (state != State.Pump)
             {
@@ -262,10 +272,64 @@ public class PlayerScript : MonoBehaviour
         {
             anim.SetTrigger("Pump");
             pumpCt++;
+            if(pumpCt >= 6)
+            {
+                if(form == Form.None)
+                {
+                    prefab = Instantiate(balloon, transform, false);
+                    prefab.transform.position = new Vector2(transform.position.x - 0.12f, transform.position.y + 0.4f);
+                    form = Form.Balloon1;
+                }
+            }
         }
     }
 
-    bool castUp()
+    void checkCollisions()
+    {
+        int ct = 0;
+        Collider2D[] results = new Collider2D[5];
+        EntityScript entity;
+
+        filter.NoFilter();
+        filter.useTriggers = true;
+        ct = coll.OverlapCollider(filter, results);
+        uCheck = false;
+        dCheck = false;
+        lCheck = false;
+        rCheck = false;
+        collision.Set(0, 0, 0, 0);
+
+        if (ct > 0)
+        {
+            for (int i = 0; i < ct; i++)
+            {
+                entity = results[i].GetComponent<EntityScript>();
+
+                if ((Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x)) && (Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x)) && (Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y)) && moveVector.y <= 0 && entity.uTang)
+                {
+                    uCheck = true;
+                    collision.height = results[i].bounds.max.y;
+                }
+                else if ((Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x) <= Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x)) && (Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x) <= Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y)) && entity.rTang)
+                {
+                    rCheck = true;
+                    collision.x = results[i].bounds.max.x;
+                }
+                else if ((Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x) <= Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y)) && entity.lTang)
+                {
+                    lCheck = true;
+                    collision.width = results[i].bounds.min.x;
+                }
+                else if(entity.dTang)
+                {
+                    dCheck = true;
+                    collision.height = results[i].bounds.min.y;
+                }
+            }
+        }
+    }
+
+    /*bool castUp()
     {
         hit = Physics2D.BoxCastAll(transform.position, new Vector2(coll.bounds.size.x - 0.1f, 0.01f), 0, Vector2.up, coll.bounds.extents.y - 0.01f, 1);
         if (hit.Length > 0)
@@ -299,5 +363,5 @@ public class PlayerScript : MonoBehaviour
             return true;
         else
             return false;
-    }
+    }*/
 }
