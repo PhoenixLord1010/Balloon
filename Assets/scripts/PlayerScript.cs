@@ -12,9 +12,9 @@ public class PlayerScript : MonoBehaviour
     
     private Vector2 moveVector = new Vector2(0, 0);
     private float speed, accel, decel, gravity, grav, jump, flap;
-    private int isRight = 1;
-    public bool jumping = false;
-    public bool uCheck, dCheck, lCheck, rCheck;
+    private bool isRight = true;
+    private bool jumping = false;
+    private bool uCheck, dCheck, lCheck, rCheck;
     private Rect collision;
     private int pumpCt = 0;
 
@@ -28,7 +28,7 @@ public class PlayerScript : MonoBehaviour
     private RaycastHit2D[] hit;
     private ContactFilter2D filter;
 
-    private float scale = 0.005f;
+    private float scale = 0.006f;
 
 	// Use this for initialization
 	void Start ()
@@ -131,6 +131,7 @@ public class PlayerScript : MonoBehaviour
                         {
                             state = State.Skid;
                             anim.SetInteger("State", (int)state);
+                            if (prefab != null) prefab.SendMessage("GetState", (int)state);
                         }
                     }
                 }
@@ -145,6 +146,7 @@ public class PlayerScript : MonoBehaviour
                         {
                             state = State.Skid;
                             anim.SetInteger("State", (int)state);
+                            if (prefab != null) prefab.SendMessage("GetState", (int)state);
                         }
                     }
                 }
@@ -157,6 +159,7 @@ public class PlayerScript : MonoBehaviour
                         {
                             state = State.Idle;
                             anim.SetInteger("State", (int)state);
+                            if (prefab != null) prefab.SendMessage("GetState", (int)state);
                         }
                     }
                     else if (moveVector.x > 0) moveVector.x -= decel;
@@ -170,16 +173,19 @@ public class PlayerScript : MonoBehaviour
                         state = State.Walk;
                         anim.SetInteger("State", (int)state);
                         anim.SetTrigger("Walk");
+                        if (prefab != null) prefab.SendMessage("GetState", (int)state);
                     }
-                    if (moveVector.x > 0 && isRight == 0)
+                    if (moveVector.x > 0 && isRight == false)
                     {
-                        isRight = 1;
-                        anim.SetInteger("isRight", isRight);
+                        isRight = true;
+                        anim.SetBool("isRight", isRight);
+                        if (prefab != null) prefab.SendMessage("IsRight", isRight);
                     }
-                    if (moveVector.x < 0 && isRight == 1)
+                    if (moveVector.x < 0 && isRight == true)
                     {
-                        isRight = 0;
-                        anim.SetInteger("isRight", isRight);
+                        isRight = false;
+                        anim.SetBool("isRight", isRight);
+                        if (prefab != null) prefab.SendMessage("IsRight", isRight);
                     }
                 }
             }
@@ -187,13 +193,15 @@ public class PlayerScript : MonoBehaviour
             {
                 if (Input.GetKey("d"))
                 {
-                    isRight = 1;
-                    anim.SetInteger("isRight", isRight);
+                    isRight = true;
+                    anim.SetBool("isRight", isRight);
+                    if (prefab != null) prefab.SendMessage("IsRight", isRight);
                 }
                 else if (Input.GetKey("a"))
                 {
-                    isRight = 0;
-                    anim.SetInteger("isRight", isRight);
+                    isRight = false;
+                    anim.SetBool("isRight", isRight);
+                    if (prefab != null) prefab.SendMessage("IsRight", isRight);
                 }
             }
         }
@@ -205,6 +213,7 @@ public class PlayerScript : MonoBehaviour
             state = State.Jump;
             anim.SetInteger("State", (int)state);
             anim.ResetTrigger("Flap");
+            if (prefab != null) prefab.SendMessage("GetState", (int)state);
             jumping = false;
         }
 
@@ -218,6 +227,7 @@ public class PlayerScript : MonoBehaviour
             {
                 state = State.Jump;
                 anim.SetInteger("State", (int)state);
+                if (prefab != null) prefab.SendMessage("GetState", (int)state);
             }
 
             if(form == Form.Balloon1 || form == Form.Balloon2)
@@ -242,8 +252,8 @@ public class PlayerScript : MonoBehaviour
                 if(form == Form.Balloon1 || form == Form.Balloon2)
                 {
                     moveVector.y = flap;
-                    if (Input.GetKey("d") && (int)(moveVector.x / scale) < 6) moveVector.x += 2 * scale;
-                    else if (Input.GetKey("a") && (int)(moveVector.x / scale) > -6) moveVector.x -= 2 * scale;
+                    if (Input.GetKey("d") && (int)(moveVector.x / scale) < 9) moveVector.x += 2 * scale;
+                    else if (Input.GetKey("a") && (int)(moveVector.x / scale) > -9) moveVector.x -= 2 * scale;
                 }
                 anim.SetTrigger("Flap");
             } 
@@ -265,6 +275,7 @@ public class PlayerScript : MonoBehaviour
             }
 
             anim.SetInteger("State", (int)state);
+            if (prefab != null) prefab.SendMessage("GetState", (int)state);
         }
 
         //Pump
@@ -280,6 +291,18 @@ public class PlayerScript : MonoBehaviour
                     prefab.transform.position = new Vector2(transform.position.x - 0.12f, transform.position.y + 0.4f);
                     form = Form.Balloon1;
                 }
+            }
+        }
+
+        if(Input.GetKeyDown("o") && form != Form.None)
+        {
+            switch(form)
+            {
+                case Form.Balloon1:
+                case Form.Balloon2:
+                    form = Form.None;
+                    prefab.parent = null;
+                    break;
             }
         }
     }
