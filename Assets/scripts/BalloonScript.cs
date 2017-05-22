@@ -22,20 +22,32 @@ public class BalloonScript : MonoBehaviour
             if (moveVector.y < 1) moveVector.y += 0.07f * scale;
             else if (moveVector.y > 1) moveVector.y = 1;
 
+            if (anim.GetInteger("State") != 3)
+            {
+                anim.SetInteger("State", 3);
+                anim.SetTrigger("Walk");
+            }
+
             transform.Translate(moveVector);
         }
 	}
 
+    void GetVector(Vector2 i)
+    {
+        moveVector.x = i.x / 3;
+        moveVector.y = i.y / 5;
+    }
+
     void GetState(int i)
     {
         if (i == 4) i = 0;
-        anim.SetInteger("State", i);
-
         if ((i == 0 && anim.GetInteger("State") != 0) || (i == 3 && anim.GetInteger("State") != 3)) anim.SetTrigger("Walk");
+        anim.SetInteger("State", i);
     }
 
     void GetForm(int i)
     {
+        if (i == 2) anim.SetTrigger("Walk");
         anim.SetInteger("Form", i);
     }
 

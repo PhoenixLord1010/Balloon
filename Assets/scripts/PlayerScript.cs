@@ -28,7 +28,7 @@ public class PlayerScript : MonoBehaviour
     private RaycastHit2D[] hit;
     private ContactFilter2D filter;
 
-    private float scale = 0.006f;
+    private float scale = 0.005f;
 
 	// Use this for initialization
 	void Start ()
@@ -50,8 +50,8 @@ public class PlayerScript : MonoBehaviour
                 decel = 0.5f * scale;
                 gravity = -10 * scale;
                 grav = 0.35f * scale;
-                jump = 6 * scale;
-                flap = 4 * scale;
+                jump = 7 * scale;
+                flap = 5 * scale;
                 break;
             case Form.Balloon2:
                 speed = 7 * scale;
@@ -59,8 +59,8 @@ public class PlayerScript : MonoBehaviour
                 decel = 0.3f * scale;
                 gravity = -10 * scale;
                 grav = 0.25f * scale;
-                jump = 7 * scale;
-                flap = 5 * scale;
+                jump = 8 * scale;
+                flap = 6 * scale;
                 break;
             case Form.Chute:
                 speed = 5 * scale;
@@ -252,8 +252,8 @@ public class PlayerScript : MonoBehaviour
                 if(form == Form.Balloon1 || form == Form.Balloon2)
                 {
                     moveVector.y = flap;
-                    if (Input.GetKey("d") && (int)(moveVector.x / scale) < 9) moveVector.x += 2 * scale;
-                    else if (Input.GetKey("a") && (int)(moveVector.x / scale) > -9) moveVector.x -= 2 * scale;
+                    if (Input.GetKey("d") && (int)(moveVector.x / scale) < 10) moveVector.x += 2 * scale;
+                    else if (Input.GetKey("a") && (int)(moveVector.x / scale) > -10) moveVector.x -= 2 * scale;
                 }
                 anim.SetTrigger("Flap");
             } 
@@ -291,9 +291,22 @@ public class PlayerScript : MonoBehaviour
                     prefab.transform.position = new Vector2(transform.position.x - 0.12f, transform.position.y + 0.4f);
                     form = Form.Balloon1;
                 }
+                else
+                {
+                    form = Form.Balloon2;
+                    state = State.Idle;
+                    anim.SetInteger("State", (int)state);
+                    if (prefab != null)
+                    {
+                        prefab.SendMessage("GetForm", (int)form);
+                        prefab.SendMessage("GetState", (int)state);
+                    }
+                }
+                pumpCt = 0;
             }
         }
 
+        //Detach
         if(Input.GetKeyDown("o") && form != Form.None)
         {
             switch(form)
@@ -301,7 +314,9 @@ public class PlayerScript : MonoBehaviour
                 case Form.Balloon1:
                 case Form.Balloon2:
                     form = Form.None;
+                    prefab.SendMessage("GetVector", moveVector);
                     prefab.parent = null;
+                    prefab = null;
                     break;
             }
         }
