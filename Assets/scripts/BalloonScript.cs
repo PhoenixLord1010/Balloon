@@ -4,14 +4,16 @@ using UnityEngine;
 
 public class BalloonScript : MonoBehaviour
 {
-    private Vector2 moveVector = new Vector2(0, 0);
     private Animator anim;
+    private EntityScript self;
+
     private float scale = 0.005f;
 
     // Use this for initialization
     void Start ()
     {
         anim = this.GetComponent<Animator>();
+        self = this.GetComponent<EntityScript>();
 	}
 	
 	// Update is called once per frame
@@ -19,8 +21,8 @@ public class BalloonScript : MonoBehaviour
     {
 		if(transform.parent == null)
         {
-            if (moveVector.y < 1) moveVector.y += 0.07f * scale;
-            else if (moveVector.y > 1) moveVector.y = 1;
+            if (self.moveVector.y < 1) self.moveVector.y += 0.07f * scale;
+            else if (self.moveVector.y > 1) self.moveVector.y = 1;
 
             if (anim.GetInteger("State") != 3)
             {
@@ -28,14 +30,14 @@ public class BalloonScript : MonoBehaviour
                 anim.SetTrigger("Walk");
             }
 
-            transform.Translate(moveVector);
+            transform.Translate(self.moveVector);
         }
 	}
 
     void GetVector(Vector2 i)
     {
-        moveVector.x = i.x / 3;
-        moveVector.y = i.y / 5;
+        self.moveVector.x = i.x / 3;
+        self.moveVector.y = i.y / 5;
     }
 
     void GetState(int i)
@@ -47,7 +49,12 @@ public class BalloonScript : MonoBehaviour
 
     void GetForm(int i)
     {
-        if (i == 2) anim.SetTrigger("Walk");
+        if (i == 2)
+        {
+            anim.SetTrigger("Walk");
+            tag = "Balloon2";
+        }
+        else tag = "Balloon1";
         anim.SetInteger("Form", i);
     }
 

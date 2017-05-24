@@ -4,20 +4,9 @@ using UnityEngine;
 
 public class EntityScript : MonoBehaviour
 {
+    public Vector2 moveVector = new Vector2(0, 0);
     public bool uTang;
     public bool lTang;
     public bool rTang;
     public bool dTang;
-
-    // Use this for initialization
-    void Start ()
-    {
-		
-	}
-	
-	// Update is called once per frame
-	void Update ()
-    {
-		
-	}
 }
