@@ -12,6 +12,7 @@ public class BalloonScript : MonoBehaviour
     // Use this for initialization
     void Start ()
     {
+        name = "Balloon";
         anim = this.GetComponent<Animator>();
         self = this.GetComponent<EntityScript>();
 	}
@@ -21,8 +22,8 @@ public class BalloonScript : MonoBehaviour
     {
 		if(transform.parent == null)
         {
-            if (self.moveVector.y < 1) self.moveVector.y += 0.07f * scale;
-            else if (self.moveVector.y > 1) self.moveVector.y = 1;
+            if (self.move.y < 1) self.move.y += 0.07f * scale;
+            else if (self.move.y > 1) self.move.y = 1;
 
             if (anim.GetInteger("State") != 3)
             {
@@ -30,14 +31,14 @@ public class BalloonScript : MonoBehaviour
                 anim.SetTrigger("Walk");
             }
 
-            transform.Translate(self.moveVector);
+            transform.Translate(self.move);
         }
 	}
 
     void GetVector(Vector2 i)
     {
-        self.moveVector.x = i.x / 3;
-        self.moveVector.y = i.y / 5;
+        self.move.x = i.x / 3;
+        self.move.y = i.y / 5;
     }
 
     void GetState(int i)
@@ -60,6 +61,7 @@ public class BalloonScript : MonoBehaviour
 
     void IsRight(bool i)
     {
+        if (anim == null) anim = GetComponent<Animator>();
         anim.SetBool("isRight", i);
     }
 }

@@ -15,8 +15,10 @@ public class PlayerScript : MonoBehaviour
     private bool uCheck, dCheck, lCheck, rCheck;   
     private Rect collision;
     private int pumpCt = 0;
+    private bool fly = false;
 
     public Transform balloon;
+    public Transform chute;
     private Transform prefab;
     
     private Animator anim;
@@ -29,9 +31,9 @@ public class PlayerScript : MonoBehaviour
 	// Use this for initialization
 	void Start ()
     {
-        anim = this.GetComponent<Animator>();
-        coll = this.GetComponent<BoxCollider2D>();
-        self = this.GetComponent<EntityScript>();
+        anim = GetComponent<Animator>();
+        coll = GetComponent<BoxCollider2D>();
+        self = GetComponent<EntityScript>();
     }
 	
 	// Update is called once per frame
@@ -82,7 +84,7 @@ public class PlayerScript : MonoBehaviour
                 decel = 0.6f * scale;
                 gravity = -12 * scale;
                 grav = 1.75f * scale;
-                jump = 22 * scale;
+                jump = 30 * scale;
                 flap = 0 * scale;
                 break;
         }
@@ -90,97 +92,98 @@ public class PlayerScript : MonoBehaviour
         //Collisions
         checkCollisions();
 
-        if (dCheck && self.moveVector.y > 0)
+        if (dCheck && self.move.y > 0)
         {
-            self.moveVector.y = 0;
+            self.move.y = 0;
         }
 
-        if (uCheck && self.moveVector.y <= 0)
+        if (uCheck && self.move.y <= 0)
         {
-            self.moveVector.y = 0;
-            transform.position = new Vector2(transform.position.x, collision.height - 0.01f);
+            self.move.y = 0;
+            transform.position = new Vector2(transform.position.x, collision.height - (coll.offset.y - coll.size.y * 0.5f));
+            fly = false;
         }
 
-        if (rCheck && self.moveVector.x < 0)
+        if (rCheck && self.move.x < 0)
         {
-            self.moveVector.x = 0;
+            self.move.x = 0;
         }
 
-        if (lCheck && self.moveVector.x > 0)
+        if (lCheck && self.move.x > 0)
         {
-            self.moveVector.x = 0;
+            self.move.x = 0;
         }
 
         if (state != State.Pump)
         {
             if (uCheck || form == Form.None || form == Form.Chute || form == Form.Rocket)
             {
-                if (Input.GetKey("d") && !lCheck)
+                if (Input.GetKey("d") && !Input.GetKey("a") && !lCheck)
                 {
-                    if (self.moveVector.x < speed) self.moveVector.x += accel;
-                    else if (self.moveVector.x > speed) self.moveVector.x = speed;
+                    if (self.move.x < speed) self.move.x += accel;
+                    else if (self.move.x > speed) self.move.x = speed;
 
-                    if(self.moveVector.x < 0)
+                    if(self.move.x < 0)
                     {
                         if (uCheck && state != State.Skid)
                         {
                             state = State.Skid;
                             anim.SetInteger("State", (int)state);
-                            if (prefab != null) prefab.SendMessage("GetState", (int)state);
+                            if (prefab != null && prefab.name == "Balloon") prefab.SendMessage("GetState", (int)state);
                         }
                     }
                 }
-                else if (Input.GetKey("a") && !rCheck)
+                else if (Input.GetKey("a") && !Input.GetKey("d") && !rCheck)
                 {
-                    if (self.moveVector.x > -speed) self.moveVector.x -= accel;
-                    else if (self.moveVector.x < -speed) self.moveVector.x = -speed;
+                    if (self.move.x > -speed) self.move.x -= accel;
+                    else if (self.move.x < -speed) self.move.x = -speed;
 
-                    if (self.moveVector.x > 0)
+                    if (self.move.x > 0)
                     {
                         if (uCheck && state != State.Skid)
                         {
                             state = State.Skid;
                             anim.SetInteger("State", (int)state);
-                            if (prefab != null) prefab.SendMessage("GetState", (int)state);
+                            if (prefab != null && prefab.name == "Balloon") prefab.SendMessage("GetState", (int)state);
                         }
                     }
                 }
                 else
                 {
-                    if (Mathf.Abs(self.moveVector.x) < decel)
+                    if (Mathf.Abs(self.move.x) < decel)
                     {
-                        self.moveVector.x = 0;
+                        self.move.x = 0;
                         if (uCheck && state != State.Idle)
                         {
                             state = State.Idle;
                             anim.SetInteger("State", (int)state);
-                            if (prefab != null) prefab.SendMessage("GetState", (int)state);
+                            if (prefab != null && prefab.name == "Balloon") prefab.SendMessage("GetState", (int)state);
                         }
                     }
-                    else if (self.moveVector.x > 0) self.moveVector.x -= decel;
-                    else self.moveVector.x += decel;
+                    else if (self.move.x > 0) self.move.x -= decel;
+                    else self.move.x += decel;
                 }
 
-                if (self.moveVector.x != 0)
+                if (self.move.x != 0)
                 {
-                    if (uCheck && state != State.Walk && ((self.moveVector.x > 0 && !Input.GetKey("a")) || (self.moveVector.x < 0 && !Input.GetKey("d"))))
+                    if (uCheck && state != State.Walk && ((self.move.x > 0 && !Input.GetKey("a")) || (self.move.x < 0 && !Input.GetKey("d"))))
                     {
                         state = State.Walk;
                         anim.SetInteger("State", (int)state);
                         anim.SetTrigger("Walk");
-                        if (prefab != null) prefab.SendMessage("GetState", (int)state);
+                        if (prefab != null && prefab.name == "Balloon") prefab.SendMessage("GetState", (int)state);
                     }
-                    if (self.moveVector.x > 0 && isRight == false)
+                    if (self.move.x > 0 && isRight == false)
                     {
                         isRight = true;
                         anim.SetBool("isRight", isRight);
-                        if (prefab != null) prefab.SendMessage("IsRight", isRight);
+                        if (prefab != null && prefab.name == "Rocket") prefab.SendMessage("IsRight", isRight);
                     }
-                    if (self.moveVector.x < 0 && isRight == true)
+                    if (self.move.x < 0 && isRight == true)
                     {
                         isRight = false;
                         anim.SetBool("isRight", isRight);
-                        if (prefab != null) prefab.SendMessage("IsRight", isRight);
+                        if (prefab != null && prefab.name == "Rocket") prefab.SendMessage("IsRight", isRight);
                     }
                 }
             }
@@ -190,13 +193,13 @@ public class PlayerScript : MonoBehaviour
                 {
                     isRight = true;
                     anim.SetBool("isRight", isRight);
-                    if (prefab != null) prefab.SendMessage("IsRight", isRight);
+                    if (prefab != null && prefab.name == "Balloon") prefab.SendMessage("IsRight", isRight);
                 }
                 else if (Input.GetKey("a"))
                 {
                     isRight = false;
                     anim.SetBool("isRight", isRight);
-                    if (prefab != null) prefab.SendMessage("IsRight", isRight);
+                    if (prefab != null && prefab.name == "Balloon") prefab.SendMessage("IsRight", isRight);
                 }
             }
         }
@@ -204,38 +207,72 @@ public class PlayerScript : MonoBehaviour
         //Falling
         if (!uCheck)
         {
-            if (self.moveVector.y > gravity) self.moveVector.y -= grav;
-            else if (self.moveVector.y < gravity) self.moveVector.y = gravity;           
-
-            if (state != State.Jump)
+            if (form != Form.Chute)
             {
-                state = State.Jump;
-                anim.SetInteger("State", (int)state);
-                if (prefab != null) prefab.SendMessage("GetState", (int)state);
+                if (self.move.y > gravity) self.move.y -= grav;
+                else if (self.move.y < gravity) self.move.y = gravity;
+
+                if (state != State.Jump)
+                {
+                    state = State.Jump;
+                    anim.SetInteger("State", (int)state);
+                    if (prefab != null && prefab.name == "Balloon") prefab.SendMessage("GetState", (int)state);
+                }
+
+                if (form == Form.Balloon1 || form == Form.Balloon2)
+                {
+                    self.move.x = ((int)(self.move.x / scale) - ((int)(self.move.x / scale) % 2)) * scale;
+                }
             }
-
-            if(form == Form.Balloon1 || form == Form.Balloon2)
+            else
             {
-                self.moveVector.x = ((int)(self.moveVector.x / scale) - ((int)(self.moveVector.x / scale) % 2)) * scale;
+                if (self.move.y / 1.15f <= -jump) self.move.y /= 1.15f;
+                else self.move.y = -jump;
+            }
+        }
+        else
+        {
+            if(prefab != null && prefab.tag == "Chute")
+            {
+                DestroyObject(prefab.gameObject);
+                if(form == Form.Chute)form = Form.None;
             }
         }
 
         /*Reconnect with balloons*/
         if(above != null && form == Form.None)
         {
-            if(above.tag == "Balloon1" || above.tag == "Balloon2")
+            if(above.name == "Balloon")
             {
                 if (above.tag == "Balloon1") form = Form.Balloon1;
                 else form = Form.Balloon2;
                 prefab = above.transform;
                 prefab.parent = transform;
                 prefab.transform.position = new Vector2(transform.position.x - 0.12f, transform.position.y + 0.4f);
-                self.moveVector.x = ((int)(self.moveVector.x / scale) - ((int)(self.moveVector.x / scale) % 2)) * scale;
-                self.moveVector.y = (self.moveVector.y + above.moveVector.y) * 0.5f;
+                self.move.x = ((int)(self.move.x / scale) - ((int)(self.move.x / scale) % 2)) * scale;
+                self.move.y = (self.move.y + above.move.y) * 0.5f;
             }
         }
 
-        transform.Translate(self.moveVector);
+        /*Connect with Rocket*/
+        if(((left != null && left.name == "Rocket") || (right != null && right.name == "Rocket")) && form == Form.None)
+        {
+            form = Form.Rocket;
+            if (left != null && left.name == "Rocket") prefab = left.transform;
+            else prefab = right.transform;
+            prefab.parent = transform;
+            prefab.SendMessage("IsRight", isRight);
+        }
+
+        /*Fly Rocket*/
+        if (Input.GetButton("Jump") && form == Form.Rocket && fly == true)
+        {
+            if (self.move.y < jump / 2) self.move.y += flap;
+            if (prefab != null) prefab.SendMessage("Fly", true);
+        }
+        else if (prefab != null) prefab.SendMessage("Fly", false);
+
+        transform.Translate(self.move);
     }
 
     void Update()
@@ -244,20 +281,21 @@ public class PlayerScript : MonoBehaviour
         {
             if (uCheck)                 /*Jump*/
             {
-                self.moveVector.y = jump;
+                self.move.y = jump;
                 state = State.Jump;
                 anim.SetInteger("State", (int)state);
                 anim.ResetTrigger("Flap");
-                if (prefab != null) prefab.SendMessage("GetState", (int)state);
+                if (prefab != null && prefab.name == "Balloon") prefab.SendMessage("GetState", (int)state);
             }   
             else                        /*Flap*/
             {
-                if(form == Form.Balloon1 || form == Form.Balloon2)
+                if (form == Form.Balloon1 || form == Form.Balloon2)
                 {
-                    self.moveVector.y = flap;
-                    if (Input.GetKey("d") && (int)(self.moveVector.x / scale) < 9) self.moveVector.x += 2 * scale;
-                    else if (Input.GetKey("a") && (int)(self.moveVector.x / scale) > -9) self.moveVector.x -= 2 * scale;
+                    self.move.y = flap;
+                    if (Input.GetKey("d") && (int)(self.move.x / scale) < 9) self.move.x += 2 * scale;
+                    else if (Input.GetKey("a") && (int)(self.move.x / scale) > -9) self.move.x -= 2 * scale;
                 }
+                else if (form == Form.Rocket) fly = true;
                 anim.SetTrigger("Flap");
             } 
         }
@@ -268,7 +306,7 @@ public class PlayerScript : MonoBehaviour
             if (state != State.Pump)
             {
                 state = State.Pump;
-                self.moveVector.x = 0;
+                self.move.x = 0;
                 anim.ResetTrigger("Pump");
             }
             else
@@ -278,7 +316,7 @@ public class PlayerScript : MonoBehaviour
             }
 
             anim.SetInteger("State", (int)state);
-            if (prefab != null) prefab.SendMessage("GetState", (int)state);
+            if (prefab != null && prefab.name == "Balloon") prefab.SendMessage("GetState", (int)state);
         }
 
         //Pump
@@ -292,6 +330,7 @@ public class PlayerScript : MonoBehaviour
                 {
                     prefab = Instantiate(balloon, transform, false);
                     prefab.transform.position = new Vector2(transform.position.x - 0.12f, transform.position.y + 0.4f);
+                    prefab.SendMessage("IsRight", isRight);
                     form = Form.Balloon1;
                 }
                 else
@@ -317,14 +356,31 @@ public class PlayerScript : MonoBehaviour
                 case Form.Balloon1:
                 case Form.Balloon2:
                     form = Form.None;
-                    prefab.SendMessage("GetVector", self.moveVector);
+                    prefab.SendMessage("GetVector", self.move);
+                    prefab.parent = null;
+                    prefab = null;
+                    break;
+                case Form.Chute:
+                    form = Form.None;
+                    prefab.SendMessage("Rip");
+                    break;
+                case Form.Rocket:
+                    form = Form.None;
                     prefab.parent = null;
                     prefab = null;
                     break;
             }
         }
-    }
 
+        /*Pull out parachute*/
+        if(Input.GetKeyDown("p") && !uCheck && self.move.y < 0 && form == Form.None)
+        {
+            prefab = Instantiate(chute, transform, false);
+            prefab.position = new Vector2(transform.position.x - 0.03f, transform.position.y + 0.53f);
+            form = Form.Chute;
+        }
+    }
+    
     void checkCollisions()
     {
         int ct = 0;
@@ -351,7 +407,7 @@ public class PlayerScript : MonoBehaviour
             {
                 entity = results[i].GetComponent<EntityScript>();
 
-                if ((Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x)) && (Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x)) && (Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y)) && self.moveVector.y <= entity.moveVector.y)
+                if ((Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x)) && (Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x)) && (Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y)) && self.move.y <= entity.move.y)
                 {
                     below = entity;
                     if (entity.uTang)
@@ -360,7 +416,7 @@ public class PlayerScript : MonoBehaviour
                         collision.height = results[i].bounds.max.y;
                     }
                 }
-                else if ((Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x) <= Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x)) && (Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x) <= Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y)) && self.moveVector.x <= entity.moveVector.x)
+                else if ((Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x) <= Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x)) && (Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x) <= Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y)) && self.move.x <= entity.move.x)
                 {
                     left = entity;
                     if (entity.rTang)
@@ -369,7 +425,7 @@ public class PlayerScript : MonoBehaviour
                         collision.x = results[i].bounds.max.x;
                     }
                 }
-                else if ((Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x) <= Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y)) && self.moveVector.x >= entity.moveVector.x)
+                else if ((Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x) <= Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y)) && self.move.x >= entity.move.x)
                 {
                     right = entity;
                     if (entity.lTang)
@@ -378,7 +434,7 @@ public class PlayerScript : MonoBehaviour
                         collision.width = results[i].bounds.min.x;
                     }
                 }
-                else if (self.moveVector.y >= entity.moveVector.y)
+                else if (self.move.y >= entity.move.y)
                 {
                     above = entity;
                     if (entity.dTang)
