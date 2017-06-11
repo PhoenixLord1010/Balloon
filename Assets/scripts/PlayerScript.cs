@@ -45,7 +45,7 @@ public class PlayerScript : MonoBehaviour
                 speed = 7.5f * scale;
                 accel = 0.6f * scale;
                 decel = 0.5f * scale;
-                gravity = -10 * scale;
+                gravity = -12 * scale;
                 grav = 0.35f * scale;
                 jump = 7 * scale;
                 flap = 5 * scale;
@@ -54,7 +54,7 @@ public class PlayerScript : MonoBehaviour
                 speed = 7 * scale;
                 accel = 0.4f * scale;
                 decel = 0.3f * scale;
-                gravity = -10 * scale;
+                gravity = -11 * scale;
                 grav = 0.25f * scale;
                 jump = 8 * scale;
                 flap = 6 * scale;
@@ -72,9 +72,9 @@ public class PlayerScript : MonoBehaviour
                 speed = 5 * scale;
                 accel = 0.3f * scale;
                 decel = 0.4f * scale;
-                gravity = -10 * scale;
+                gravity = -15 * scale;
                 grav = 2.4f * scale;
-                jump = 18 * scale;
+                jump = 24 * scale;
                 flap = 3 * scale;
                 break;
             case Form.None:
@@ -82,9 +82,9 @@ public class PlayerScript : MonoBehaviour
                 speed = 8 * scale;
                 accel = 0.7f * scale;
                 decel = 0.6f * scale;
-                gravity = -12 * scale;
+                gravity = -14 * scale;
                 grav = 1.75f * scale;
-                jump = 30 * scale;
+                jump = 28 * scale;
                 flap = 0 * scale;
                 break;
         }
@@ -104,12 +104,12 @@ public class PlayerScript : MonoBehaviour
             fly = false;
         }
 
-        if (rCheck && self.move.x < 0)
+        if (rCheck && !left.movable && self.move.x < 0)
         {
             self.move.x = 0;
         }
 
-        if (lCheck && self.move.x > 0)
+        if (lCheck && !right.movable && self.move.x > 0)
         {
             self.move.x = 0;
         }
@@ -118,12 +118,12 @@ public class PlayerScript : MonoBehaviour
         {
             if (uCheck || form == Form.None || form == Form.Chute || form == Form.Rocket)
             {
-                if (Input.GetKey("d") && !Input.GetKey("a") && !lCheck)
+                if (Input.GetKey("d") && !Input.GetKey("a") && (!lCheck || (lCheck && right.movable)))
                 {
                     if (self.move.x < speed) self.move.x += accel;
                     else if (self.move.x > speed) self.move.x = speed;
 
-                    if(self.move.x < 0)
+                    if (self.move.x < 0)
                     {
                         if (uCheck && state != State.Skid)
                         {
@@ -133,7 +133,7 @@ public class PlayerScript : MonoBehaviour
                         }
                     }
                 }
-                else if (Input.GetKey("a") && !Input.GetKey("d") && !rCheck)
+                else if (Input.GetKey("a") && !Input.GetKey("d") && (!rCheck || (rCheck && left.movable)))
                 {
                     if (self.move.x > -speed) self.move.x -= accel;
                     else if (self.move.x < -speed) self.move.x = -speed;
@@ -177,13 +177,13 @@ public class PlayerScript : MonoBehaviour
                     {
                         isRight = true;
                         anim.SetBool("isRight", isRight);
-                        if (prefab != null && prefab.name == "Rocket") prefab.SendMessage("IsRight", isRight);
+                        if (prefab != null && (prefab.name == "Balloon" || prefab.name == "Rocket")) prefab.SendMessage("IsRight", isRight);
                     }
                     if (self.move.x < 0 && isRight == true)
                     {
                         isRight = false;
                         anim.SetBool("isRight", isRight);
-                        if (prefab != null && prefab.name == "Rocket") prefab.SendMessage("IsRight", isRight);
+                        if (prefab != null && (prefab.name == "Balloon" ||prefab.name == "Rocket")) prefab.SendMessage("IsRight", isRight);
                     }
                 }
             }
@@ -270,7 +270,7 @@ public class PlayerScript : MonoBehaviour
             if (self.move.y < jump / 2) self.move.y += flap;
             if (prefab != null) prefab.SendMessage("Fly", true);
         }
-        else if (prefab != null) prefab.SendMessage("Fly", false);
+        else if (form == Form.Rocket && prefab != null) prefab.SendMessage("Fly", false);
 
         transform.Translate(self.move);
     }
@@ -366,6 +366,7 @@ public class PlayerScript : MonoBehaviour
                     break;
                 case Form.Rocket:
                     form = Form.None;
+                    prefab.SendMessage("GetVector", self.move);
                     prefab.parent = null;
                     prefab = null;
                     break;
@@ -407,7 +408,7 @@ public class PlayerScript : MonoBehaviour
             {
                 entity = results[i].GetComponent<EntityScript>();
 
-                if ((Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x)) && (Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x)) && (Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y)) && self.move.y <= entity.move.y)
+                if ((Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= 0.1f) && (Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x)) && (Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x)) && (Mathf.Abs(coll.bounds.min.y - results[i].bounds.max.y) <= Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y)) && self.move.y <= entity.move.y)
                 {
                     below = entity;
                     if (entity.uTang)
@@ -416,7 +417,7 @@ public class PlayerScript : MonoBehaviour
                         collision.height = results[i].bounds.max.y;
                     }
                 }
-                else if ((Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x) <= Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x)) && (Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x) <= Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y)) && self.move.x <= entity.move.x)
+                else if ((Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x) <= 0.1f) && (Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x) <= Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x)) && (Mathf.Abs(coll.bounds.min.x - results[i].bounds.max.x) <= Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y)) && self.move.x <= entity.move.x)
                 {
                     left = entity;
                     if (entity.rTang)
@@ -425,7 +426,7 @@ public class PlayerScript : MonoBehaviour
                         collision.x = results[i].bounds.max.x;
                     }
                 }
-                else if ((Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x) <= Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y)) && self.move.x >= entity.move.x)
+                else if ((Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x) <= 0.1f) && (Mathf.Abs(coll.bounds.max.x - results[i].bounds.min.x) <= Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y)) && self.move.x >= entity.move.x)
                 {
                     right = entity;
                     if (entity.lTang)
@@ -434,7 +435,7 @@ public class PlayerScript : MonoBehaviour
                         collision.width = results[i].bounds.min.x;
                     }
                 }
-                else if (self.move.y >= entity.move.y)
+                else if ((Mathf.Abs(coll.bounds.max.y - results[i].bounds.min.y) <= 0.1f) && self.move.y >= entity.move.y)
                 {
                     above = entity;
                     if (entity.dTang)
